@@ -12,26 +12,29 @@ dotenv.config({});
 
 const app = express();
 
-// CORS Configuration - MUST BE FIRST
-const allowedOrigins = ["https://job-portal-zeta-blond.vercel.app", "http://localhost:5173"];
+// ========== FIXED CORS CONFIGURATION ==========
+// Remove ALL other CORS configurations and use ONLY this:
 
+// 1. Set CORS headers manually - THIS IS CRITICAL
 app.use((req, res, next) => {
-  const origin = req.headers.origin;
+  // Always allow the Vercel frontend origin
+  res.header("Access-Control-Allow-Origin", "https://job-portal-zeta-blond.vercel.app");
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept, X-Requested-With");
   
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  }
-  
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept");
-  
+  // Handle preflight requests
   if (req.method === "OPTIONS") {
+    console.log("Handling OPTIONS preflight for origin:", req.headers.origin);
     return res.status(200).end();
   }
   
+  console.log(`${req.method} ${req.url} - Origin: ${req.headers.origin}`);
   next();
 });
+
+// 2. Remove ALL other CORS middleware calls
+// DO NOT use app.use(cors()) or app.use(cors(corsOptions)) anywhere
 
 // Middleware
 app.use(express.json());
@@ -40,13 +43,39 @@ app.use(cookieParser());
 
 const PORT = process.env.PORT || 8000;
 
-// Test route without auth
-app.get("/api/health", (req, res) => {
+// ========== TEST ENDPOINTS ==========
+// Add these to verify CORS is working
+
+// Simple health check
+app.get("/", (req, res) => {
   res.json({ 
-    status: "ok", 
-    message: "Server is running",
-    timestamp: new Date().toISOString(),
-    origin: req.headers.origin
+    message: "Job Portal Backend API",
+    status: "running",
+    corsOrigin: "https://job-portal-zeta-blond.vercel.app",
+    timestamp: new Date().toISOString()
+  });
+});
+
+// CORS test endpoint
+app.get("/api/cors-test", (req, res) => {
+  res.json({
+    message: "CORS is working!",
+    frontendOrigin: "https://job-portal-zeta-blond.vercel.app",
+    requestOrigin: req.headers.origin,
+    headersSent: {
+      "Access-Control-Allow-Origin": res.getHeader("Access-Control-Allow-Origin"),
+      "Access-Control-Allow-Credentials": res.getHeader("Access-Control-Allow-Credentials")
+    }
+  });
+});
+
+// Public job endpoint (temporarily without auth)
+app.get("/api/v1/job/test", (req, res) => {
+  res.json({
+    message: "Public job endpoint",
+    jobs: [],
+    success: true,
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -56,15 +85,18 @@ app.use("/api/v1/company", companyRoute);
 app.use("/api/v1/job", jobRoute);
 app.use("/api/v1/application", applicationRoute);
 
-// Catch-all for debugging
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.url} - Origin: ${req.headers.origin}`);
-  next();
+// 404 handler
+app.use("*", (req, res) => {
+  res.status(404).json({ 
+    error: "Route not found",
+    requestedUrl: req.originalUrl,
+    method: req.method
+  });
 });
 
 app.listen(PORT, () => {
   connectDB();
   console.log(`✅ Server running at port ${PORT}`);
-  console.log(`✅ Allowed origins: ${allowedOrigins.join(", ")}`);
-  console.log(`✅ Health check: http://localhost:${PORT}/api/health`);
+  console.log(`✅ CORS configured for: https://job-portal-zeta-blond.vercel.app`);
+  console.log(`✅ Test endpoint: https://job-portal-fsh8.onrender.com/api/cors-test`);
 });
