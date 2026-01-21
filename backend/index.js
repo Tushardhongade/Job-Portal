@@ -12,24 +12,38 @@ dotenv.config({});
 
 const app = express();
 
-// middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+// CORS Configuration - IMPORTANT: Put this before routes
 const corsOptions = {
   origin: "https://job-portal-zeta-blond.vercel.app",
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
 };
 
+// Apply CORS middleware first
 app.use(cors(corsOptions));
+
+// Handle preflight requests for all routes
+app.options('*', cors(corsOptions));
+
+// Other middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 const PORT = process.env.PORT || 3000;
 
-// api's
+// API routes
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/company", companyRoute);
 app.use("/api/v1/job", jobRoute);
 app.use("/api/v1/application", applicationRoute);
+
+// Test route
+app.get("/api/v1/test", (req, res) => {
+  res.json({ message: "Server is working!" });
+});
 
 app.listen(PORT, () => {
   connectDB();
