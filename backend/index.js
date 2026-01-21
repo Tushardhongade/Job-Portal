@@ -12,37 +12,37 @@ dotenv.config({});
 
 const app = express();
 
-// CORS Configuration - IMPORTANT: Put this before routes
-const corsOptions = {
-  origin: "https://job-portal-zeta-blond.vercel.app",
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range']
-};
-
 // Apply CORS middleware first
-app.use(cors(corsOptions));
+app.use(cors({
+  origin: "https://job-portal-zeta-blond.vercel.app",
+  credentials: true
+}));
 
-// Handle preflight requests for all routes
-app.options('*', cors(corsOptions));
-
-// Other middleware
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Handle preflight for all routes
+app.options("*", (req, res) => {
+  res.header("Access-Control-Allow-Origin", "https://job-portal-zeta-blond.vercel.app");
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.status(200).send();
+});
+
 const PORT = process.env.PORT || 3000;
 
-// API routes
+// api's
 app.use("/api/v1/user", userRoute);
 app.use("/api/v1/company", companyRoute);
 app.use("/api/v1/job", jobRoute);
 app.use("/api/v1/application", applicationRoute);
 
-// Test route
-app.get("/api/v1/test", (req, res) => {
-  res.json({ message: "Server is working!" });
+// Health check
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", timestamp: new Date() });
 });
 
 app.listen(PORT, () => {
