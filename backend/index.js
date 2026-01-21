@@ -16,25 +16,23 @@ const app = express();
 const allowedOrigins = [
   "https://job-portal-zeta-blond.vercel.app",
   "http://localhost:5173",
-  "http://localhost:3000",
-  "http://127.0.0.1:5173",
-  "http://127.0.0.1:3000"
+  "http://localhost:3000"
 ];
 
 // CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    // Allow requests with no origin or from allowed origins
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.log("CORS blocked origin:", origin);
       callback(new Error("Not allowed by CORS"));
     }
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"],
-  exposedHeaders: ["Content-Range", "X-Content-Range"],
+  allowedHeaders: ["Content-Type", "Authorization", "Accept"],
   optionsSuccessStatus: 200
 };
 
@@ -46,9 +44,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 
-// Handle preflight requests for all routes
+// Handle preflight requests
 app.options("*", cors(corsOptions));
 
 // API routes
@@ -60,18 +58,17 @@ app.use("/api/v1/application", applicationRoute);
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.json({ 
-    status: "healthy", 
-    timestamp: new Date().toISOString(),
-    allowedOrigins: allowedOrigins 
+    status: "healthy",
+    service: "job-portal-backend",
+    timestamp: new Date().toISOString()
   });
 });
 
-// Root endpoint
-app.get("/", (req, res) => {
+// Test endpoint
+app.get("/api/test", (req, res) => {
   res.json({ 
-    message: "Job Portal Backend API", 
-    version: "1.0.0",
-    docs: "/api-docs"
+    message: "Backend is working!",
+    allowedOrigins: allowedOrigins
   });
 });
 
